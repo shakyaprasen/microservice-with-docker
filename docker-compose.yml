@@ -1,0 +1,61 @@
+version: "3.2"
+services:
+  rabbitmq-serv:
+    image: rabbitmq:3.8-management-alpine
+    container_name: 'rabbitmq-serv'
+    ports:
+        - 5673:5672
+        - 15673:15672
+    volumes:
+        - ~/.docker-conf/rabbitmq/data/:/var/lib/rabbitmq/
+        - ~/.docker-conf/rabbitmq/log/:/var/log/rabbitmq
+    networks:
+        - rabbitmq_nodejs
+  producer:
+    build:
+      dockerfile: Dockerfile
+      context: ./producer-microservice/
+      target: dev
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/src
+    depends_on:
+      - rabbitmq-serv
+    command: sh -c '/bin/wait-for-it.sh rabbitmq-serv:5672 --timeout=30 -- node ./producer-microservice/index.js' 
+    environment:
+      NODE_ENV: production
+      AMQP_URL: amqp://guest:guest@rabbitmq-serv:5672
+    networks:
+      - rabbitmq_nodejs
+  consumer:
+    build:
+      dockerfile: Dockerfile
+      context: ./consumer-microservice/
+      target: dev
+    volumes:
+      - .:/src
+    depends_on:
+      - rabbitmq-serv
+    command: sh -c '/bin/wait-for-it.sh rabbitmq-serv:5672 --timeout=30 -- node ./consumer-microservice/index.js' 
+    environment:
+      NODE_ENV: production
+      AMQP_URL: amqp://guest:guest@rabbitmq-serv:5672
+    networks:
+      - rabbitmq_nodejs
+  krakend_ce:
+    image: devopsfaith/krakend:1.4.1
+    volumes:
+      - ./krakend:/etc/krakend
+    ports:
+      - "1234:1234"
+      - "8080:8080"
+      - "8090:8090"
+    depends_on:
+      - producer
+      - consumer
+    networks:
+      - rabbitmq_nodejs
+networks:
+  rabbitmq_nodejs:
+    driver: bridge

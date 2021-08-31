@@ -1,0 +1,29 @@
+{
+  "version": 2,
+  "extra_config": {},
+  "timeout": "3000ms",
+  "cache_ttl": "300s",
+  "output_encoding": "json",
+  "name": "krakend-config",
+  "endpoints": [
+    {
+      "endpoint": "/send-message",
+      "method": "GET",
+      "output_encoding": "json",
+      "extra_config": {},
+      "backend": [
+        {
+          "url_pattern": "/send",
+          "encoding": "json",
+          "sd": "static",
+          "method": "GET",
+          "extra_config": {},
+          "host": [
+            "host.docker.internal:3000"
+          ],
+          "disable_host_sanitize": false
+        }
+      ]
+    }
+  ]
+}
